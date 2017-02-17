@@ -16,26 +16,41 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.classification.LogisticRegression
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object MulticlassLogisticRegressionWithElasticNetExample {
+
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("MulticlassLogisticRegressionWithElasticNetExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    // Load training data
+    val training = spark
+      .read
+      .format("libsvm")
+      .load("data/mllib/sample_multiclass_classification_data.txt")
+
+    val lr = new LogisticRegression()
+      .setMaxIter(10)
+      .setRegParam(0.3)
+      .setElasticNetParam(0.8)
+
+    // Fit the model
+    val lrModel = lr.fit(training)
+
+    // Print the coefficients and intercept for multinomial logistic regression
+    println(s"Coefficients: \n${lrModel.coefficientMatrix}")
+    println(s"Intercepts: ${lrModel.interceptVector}")
+    // $example off$
+
     spark.stop()
   }
 }

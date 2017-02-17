@@ -16,27 +16,38 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.mllib
 
-import scala.math.random
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkConf, SparkContext}
+// $example on$
+import org.apache.spark.mllib.fpm.AssociationRules
+import org.apache.spark.mllib.fpm.FPGrowth.FreqItemset
+// $example off$
 
-/** Computes an approximation to pi */
-object SparkPi {
+object AssociationRulesExample {
+
   def main(args: Array[String]) {
-    val spark = SparkSession
-      .builder
-      .appName("Spark Pi")
-      .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
-    spark.stop()
+    val conf = new SparkConf().setAppName("AssociationRulesExample")
+    val sc = new SparkContext(conf)
+
+    // $example on$
+    val freqItemsets = sc.parallelize(Seq(
+      new FreqItemset(Array("a"), 15L),
+      new FreqItemset(Array("b"), 35L),
+      new FreqItemset(Array("a", "b"), 12L)
+    ))
+
+    val ar = new AssociationRules()
+      .setMinConfidence(0.8)
+    val results = ar.run(freqItemsets)
+
+    results.collect().foreach { rule =>
+      println("[" + rule.antecedent.mkString(",")
+        + "=>"
+        + rule.consequent.mkString(",") + "]," + rule.confidence)
+    }
+    // $example off$
   }
+
 }
 // scalastyle:on println

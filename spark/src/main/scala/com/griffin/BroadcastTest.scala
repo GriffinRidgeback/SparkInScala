@@ -18,24 +18,40 @@
 // scalastyle:off println
 package com.griffin
 
-import scala.math.random
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+/**
+ * Usage: BroadcastTest [slices] [numElem] [blockSize]
+ */
+object BroadcastTest {
   def main(args: Array[String]) {
+
+    val blockSize = if (args.length > 2) args(2) else "4096"
+
     val spark = SparkSession
-      .builder
-      .appName("Spark Pi")
+      .builder()
+      .appName("Broadcast Test")
+      .config("spark.broadcast.blockSize", blockSize)
       .getOrCreate()
+
+    val sc = spark.sparkContext
+
     val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+    val num = if (args.length > 1) args(1).toInt else 1000000
+
+    val arr1 = (0 until num).toArray
+
+    for (i <- 0 until 3) {
+      println("Iteration " + i)
+      println("===========")
+      val startTime = System.nanoTime
+      val barr1 = sc.broadcast(arr1)
+      val observedSizes = sc.parallelize(1 to 10, slices).map(_ => barr1.value.length)
+      // Collect the small RDD so we can print the observed sizes locally.
+      observedSizes.collect().foreach(i => println(i))
+      println("Iteration %d took %.0f milliseconds".format(i, (System.nanoTime - startTime) / 1E6))
+    }
+
     spark.stop()
   }
 }

@@ -16,26 +16,44 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.regression.IsotonicRegression
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+/**
+ * An example demonstrating Isotonic Regression.
+ * Run with
+ * {{{
+ * bin/run-example ml.IsotonicRegressionExample
+ * }}}
+ */
+object IsotonicRegressionExample {
+
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName(s"${this.getClass.getSimpleName}")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    // Loads data.
+    val dataset = spark.read.format("libsvm")
+      .load("data/mllib/sample_isotonic_regression_libsvm_data.txt")
+
+    // Trains an isotonic regression model.
+    val ir = new IsotonicRegression()
+    val model = ir.fit(dataset)
+
+    println(s"Boundaries in increasing order: ${model.boundaries}\n")
+    println(s"Predictions associated with the boundaries: ${model.predictions}\n")
+
+    // Makes predictions.
+    model.transform(dataset).show()
+    // $example off$
+
     spark.stop()
   }
 }

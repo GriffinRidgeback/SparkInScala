@@ -16,26 +16,36 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.RFormula
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object RFormulaExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("RFormulaExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val dataset = spark.createDataFrame(Seq(
+      (7, "US", 18, 1.0),
+      (8, "CA", 12, 0.0),
+      (9, "NZ", 15, 0.0)
+    )).toDF("id", "country", "hour", "clicked")
+
+    val formula = new RFormula()
+      .setFormula("clicked ~ country + hour")
+      .setFeaturesCol("features")
+      .setLabelCol("label")
+
+    val output = formula.fit(dataset).transform(dataset)
+    output.select("features", "label").show()
+    // $example off$
+
     spark.stop()
   }
 }

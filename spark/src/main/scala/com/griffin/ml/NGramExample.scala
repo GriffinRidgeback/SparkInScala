@@ -16,26 +16,33 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.NGram
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object NGramExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("NGramExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val wordDataFrame = spark.createDataFrame(Seq(
+      (0, Array("Hi", "I", "heard", "about", "Spark")),
+      (1, Array("I", "wish", "Java", "could", "use", "case", "classes")),
+      (2, Array("Logistic", "regression", "models", "are", "neat"))
+    )).toDF("id", "words")
+
+    val ngram = new NGram().setN(2).setInputCol("words").setOutputCol("ngrams")
+
+    val ngramDataFrame = ngram.transform(wordDataFrame)
+    ngramDataFrame.select("ngrams").show(false)
+    // $example off$
+
     spark.stop()
   }
 }

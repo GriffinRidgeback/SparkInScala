@@ -18,24 +18,40 @@
 // scalastyle:off println
 package com.griffin
 
-import scala.math.random
+import java.util.Random
+
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+/**
+ * Usage: GroupByTest [numMappers] [numKVPairs] [KeySize] [numReducers]
+ */
+object GroupByTest {
   def main(args: Array[String]) {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("GroupBy Test")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    val numMappers = if (args.length > 0) args(0).toInt else 2
+    val numKVPairs = if (args.length > 1) args(1).toInt else 1000
+    val valSize = if (args.length > 2) args(2).toInt else 1000
+    val numReducers = if (args.length > 3) args(3).toInt else numMappers
+
+    val pairs1 = spark.sparkContext.parallelize(0 until numMappers, numMappers).flatMap { p =>
+      val ranGen = new Random
+      val arr1 = new Array[(Int, Array[Byte])](numKVPairs)
+      for (i <- 0 until numKVPairs) {
+        val byteArr = new Array[Byte](valSize)
+        ranGen.nextBytes(byteArr)
+        arr1(i) = (ranGen.nextInt(Int.MaxValue), byteArr)
+      }
+      arr1
+    }.cache()
+    // Enforce that everything has been calculated and in cache
+    pairs1.count()
+
+    println(pairs1.groupByKey(numReducers).count())
+
     spark.stop()
   }
 }

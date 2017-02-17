@@ -16,27 +16,40 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.DCT
+import org.apache.spark.ml.linalg.Vectors
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object DCTExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("DCTExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val data = Seq(
+      Vectors.dense(0.0, 1.0, -2.0, 3.0),
+      Vectors.dense(-1.0, 2.0, 4.0, -7.0),
+      Vectors.dense(14.0, -2.0, -5.0, 1.0))
+
+    val df = spark.createDataFrame(data.map(Tuple1.apply)).toDF("features")
+
+    val dct = new DCT()
+      .setInputCol("features")
+      .setOutputCol("featuresDCT")
+      .setInverse(false)
+
+    val dctDf = dct.transform(df)
+    dctDf.select("featuresDCT").show(false)
+    // $example off$
+
     spark.stop()
   }
 }
 // scalastyle:on println
+

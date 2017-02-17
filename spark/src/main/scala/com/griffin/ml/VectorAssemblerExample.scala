@@ -16,26 +16,35 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.linalg.Vectors
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object VectorAssemblerExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("VectorAssemblerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val dataset = spark.createDataFrame(
+      Seq((0, 18, 1.0, Vectors.dense(0.0, 10.0, 0.5), 1.0))
+    ).toDF("id", "hour", "mobile", "userFeatures", "clicked")
+
+    val assembler = new VectorAssembler()
+      .setInputCols(Array("hour", "mobile", "userFeatures"))
+      .setOutputCol("features")
+
+    val output = assembler.transform(dataset)
+    println("Assembled columns 'hour', 'mobile', 'userFeatures' to vector column 'features'")
+    output.select("features", "clicked").show(false)
+    // $example off$
+
     spark.stop()
   }
 }

@@ -15,27 +15,47 @@
  * limitations under the License.
  */
 
-// scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// scalastyle:off println
+
+// $example on$
+import org.apache.spark.ml.clustering.KMeans
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+/**
+ * An example demonstrating k-means clustering.
+ * Run with
+ * {{{
+ * bin/run-example ml.KMeansExample
+ * }}}
+ */
+object KMeansExample {
+
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName(s"${this.getClass.getSimpleName}")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    // Loads data.
+    val dataset = spark.read.format("libsvm").load("data/mllib/sample_kmeans_data.txt")
+
+    // Trains a k-means model.
+    val kmeans = new KMeans().setK(2).setSeed(1L)
+    val model = kmeans.fit(dataset)
+
+    // Evaluate clustering by computing Within Set Sum of Squared Errors.
+    val WSSSE = model.computeCost(dataset)
+    println(s"Within Set Sum of Squared Errors = $WSSSE")
+
+    // Shows the result.
+    println("Cluster Centers: ")
+    model.clusterCenters.foreach(println)
+    // $example off$
+
     spark.stop()
   }
 }

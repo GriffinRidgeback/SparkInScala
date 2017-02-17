@@ -15,28 +15,51 @@
  * limitations under the License.
  */
 
-// scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// scalastyle:off println
+
+// $example on$
+import org.apache.spark.ml.clustering.BisectingKMeans
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+/**
+ * An example demonstrating bisecting k-means clustering.
+ * Run with
+ * {{{
+ * bin/run-example ml.BisectingKMeansExample
+ * }}}
+ */
+object BisectingKMeansExample {
+
+  def main(args: Array[String]): Unit = {
+    // Creates a SparkSession
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("BisectingKMeansExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    // Loads data.
+    val dataset = spark.read.format("libsvm").load("data/mllib/sample_kmeans_data.txt")
+
+    // Trains a bisecting k-means model.
+    val bkm = new BisectingKMeans().setK(2).setSeed(1)
+    val model = bkm.fit(dataset)
+
+    // Evaluate clustering.
+    val cost = model.computeCost(dataset)
+    println(s"Within Set Sum of Squared Errors = $cost")
+
+    // Shows the result.
+    println("Cluster Centers: ")
+    val centers = model.clusterCenters
+    centers.foreach(println)
+    // $example off$
+
     spark.stop()
   }
 }
 // scalastyle:on println
+

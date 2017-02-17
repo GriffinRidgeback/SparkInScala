@@ -16,26 +16,35 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
-import org.apache.spark.sql.SparkSession
+// $example on$
+import org.apache.spark.ml.feature.Binarizer
+// $example off$
+import org.apache.spark.sql.{SparkSession}
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object BinarizerExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("BinarizerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val data = Array((0, 0.1), (1, 0.8), (2, 0.2))
+    val dataFrame = spark.createDataFrame(data).toDF("id", "feature")
+
+    val binarizer: Binarizer = new Binarizer()
+      .setInputCol("feature")
+      .setOutputCol("binarized_feature")
+      .setThreshold(0.5)
+
+    val binarizedDataFrame = binarizer.transform(dataFrame)
+
+    println(s"Binarizer output with Threshold = ${binarizer.getThreshold}")
+    binarizedDataFrame.show()
+    // $example off$
+
     spark.stop()
   }
 }

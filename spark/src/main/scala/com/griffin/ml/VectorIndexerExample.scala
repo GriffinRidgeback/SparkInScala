@@ -16,26 +16,39 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.VectorIndexer
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object VectorIndexerExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("VectorIndexerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val data = spark.read.format("libsvm").load("data/mllib/sample_libsvm_data.txt")
+
+    val indexer = new VectorIndexer()
+      .setInputCol("features")
+      .setOutputCol("indexed")
+      .setMaxCategories(10)
+
+    val indexerModel = indexer.fit(data)
+
+    val categoricalFeatures: Set[Int] = indexerModel.categoryMaps.keys.toSet
+    println(s"Chose ${categoricalFeatures.size} categorical features: " +
+      categoricalFeatures.mkString(", "))
+
+    // Create new column "indexed" with categorical values transformed to indices
+    val indexedData = indexerModel.transform(data)
+    indexedData.show()
+    // $example off$
+
     spark.stop()
   }
 }

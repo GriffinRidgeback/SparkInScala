@@ -16,27 +16,40 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.Bucketizer
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
-  def main(args: Array[String]) {
+object BucketizerExample {
+  def main(args: Array[String]): Unit = {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("BucketizerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val splits = Array(Double.NegativeInfinity, -0.5, 0.0, 0.5, Double.PositiveInfinity)
+
+    val data = Array(-999.9, -0.5, -0.3, 0.0, 0.2, 999.9)
+    val dataFrame = spark.createDataFrame(data.map(Tuple1.apply)).toDF("features")
+
+    val bucketizer = new Bucketizer()
+      .setInputCol("features")
+      .setOutputCol("bucketedFeatures")
+      .setSplits(splits)
+
+    // Transform original data into its bucket index.
+    val bucketedData = bucketizer.transform(dataFrame)
+
+    println(s"Bucketizer output with ${bucketizer.getSplits.length-1} buckets")
+    bucketedData.show()
+    // $example off$
+
     spark.stop()
   }
 }
 // scalastyle:on println
+

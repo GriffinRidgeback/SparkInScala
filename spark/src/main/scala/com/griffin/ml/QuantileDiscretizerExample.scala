@@ -15,28 +15,39 @@
  * limitations under the License.
  */
 
-// scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.QuantileDiscretizer
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+object QuantileDiscretizerExample {
   def main(args: Array[String]) {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("QuantileDiscretizerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val data = Array((0, 18.0), (1, 19.0), (2, 8.0), (3, 5.0), (4, 2.2))
+    val df = spark.createDataFrame(data).toDF("id", "hour")
+    // $example off$
+    // Output of QuantileDiscretizer for such small datasets can depend on the number of
+    // partitions. Here we force a single partition to ensure consistent results.
+    // Note this is not necessary for normal use cases
+        .repartition(1)
+
+    // $example on$
+    val discretizer = new QuantileDiscretizer()
+      .setInputCol("hour")
+      .setOutputCol("result")
+      .setNumBuckets(3)
+
+    val result = discretizer.fit(df).transform(df)
+    result.show()
+    // $example off$
+
     spark.stop()
   }
 }
-// scalastyle:on println

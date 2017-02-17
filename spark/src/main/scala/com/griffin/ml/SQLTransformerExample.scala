@@ -16,26 +16,30 @@
  */
 
 // scalastyle:off println
-package com.griffin
+package org.apache.spark.examples.ml
 
-import scala.math.random
+// $example on$
+import org.apache.spark.ml.feature.SQLTransformer
+// $example off$
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+object SQLTransformerExample {
   def main(args: Array[String]) {
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("SQLTransformerExample")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+
+    // $example on$
+    val df = spark.createDataFrame(
+      Seq((0, 1.0, 3.0), (2, 2.0, 5.0))).toDF("id", "v1", "v2")
+
+    val sqlTrans = new SQLTransformer().setStatement(
+      "SELECT *, (v1 + v2) AS v3, (v1 * v2) AS v4 FROM __THIS__")
+
+    sqlTrans.transform(df).show()
+    // $example off$
+
     spark.stop()
   }
 }

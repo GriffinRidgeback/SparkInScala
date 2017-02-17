@@ -18,24 +18,42 @@
 // scalastyle:off println
 package com.griffin
 
-import scala.math.random
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+
+/**
+ * Usage: MultiBroadcastTest [slices] [numElem]
+ */
+object MultiBroadcastTest {
   def main(args: Array[String]) {
+
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("Multi-Broadcast Test")
       .getOrCreate()
+
     val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+    val num = if (args.length > 1) args(1).toInt else 1000000
+
+    val arr1 = new Array[Int](num)
+    for (i <- 0 until arr1.length) {
+      arr1(i) = i
+    }
+
+    val arr2 = new Array[Int](num)
+    for (i <- 0 until arr2.length) {
+      arr2(i) = i
+    }
+
+    val barr1 = spark.sparkContext.broadcast(arr1)
+    val barr2 = spark.sparkContext.broadcast(arr2)
+    val observedSizes: RDD[(Int, Int)] = spark.sparkContext.parallelize(1 to 10, slices).map { _ =>
+      (barr1.value.length, barr2.value.length)
+    }
+    // Collect the small RDD so we can print the observed sizes locally.
+    observedSizes.collect().foreach(i => println(i))
+
     spark.stop()
   }
 }

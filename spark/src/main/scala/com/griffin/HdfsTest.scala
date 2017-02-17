@@ -18,24 +18,29 @@
 // scalastyle:off println
 package com.griffin
 
-import scala.math.random
 import org.apache.spark.sql.SparkSession
 
-/** Computes an approximation to pi */
-object SparkPi {
+
+object HdfsTest {
+
+  /** Usage: HdfsTest [file] */
   def main(args: Array[String]) {
+    if (args.length < 1) {
+      System.err.println("Usage: HdfsTest <file>")
+      System.exit(1)
+    }
     val spark = SparkSession
       .builder
-      .appName("Spark Pi")
+      .appName("HdfsTest")
       .getOrCreate()
-    val slices = if (args.length > 0) args(0).toInt else 2
-    val n = math.min(100000L * slices, Int.MaxValue).toInt // avoid overflow
-    val count = spark.sparkContext.parallelize(1 until n, slices).map { i =>
-      val x = random * 2 - 1
-      val y = random * 2 - 1
-      if (x*x + y*y < 1) 1 else 0
-    }.reduce(_ + _)
-    println("Pi is roughly " + 4.0 * count / (n - 1))
+    val file = spark.read.text(args(0)).rdd
+    val mapped = file.map(s => s.length).cache()
+    for (iter <- 1 to 10) {
+      val start = System.currentTimeMillis()
+      for (x <- mapped) { x + 2 }
+      val end = System.currentTimeMillis()
+      println("Iteration " + iter + " took " + (end-start) + " ms")
+    }
     spark.stop()
   }
 }
