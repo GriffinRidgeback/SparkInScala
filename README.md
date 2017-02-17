@@ -10,7 +10,27 @@ I needed some help from [here](http://stackoverflow.com/questions/35016945/scala
 
 # Extra steps (may not be needed but here just in case)
 1. Have to add the Scala nature to the project
-2. Have to add [this](http://scala-ide.org/docs/tutorials/m2eclipse/) to the Eclipse environment
+2. Have to make it a Maven project
+3. Have to add [this](http://scala-ide.org/docs/tutorials/m2eclipse/) to the Eclipse environment
+
+# Basic workflow
+What works:
+* download externally to ~/Development/SparkInScala
+* needed to do this because modifications to .classpath and .project got lost and had to be re-done
+* once those were fixed, did an import of Git projects, pointed to the ~/Development/SparkInScala directory
+* git push, etc., work fine from Team menu item
+* issue is synchronizing this README.md, as it is outside of the directory structure for the project.  Probably have to do command-line git pull/git pushh to keep it synchronized and avoid problems within the IDE when trying to push to an out-of-synch repository
+
+How it __should__ work, now that the eclipse files have been fixed and pushed:
+* Create the workspace
+* Import from a clone URI
+* fix the nature of the project and all should be fine
+
+# Building the code
+For now, what suffices is this:
+<pre>
+Create a new run configuration by right-clicking the pom.xml and specifying "compile" as the goal
+</pre>
 
 ## Problems
 When creating this repository and then pushing to remote, I got a the following error:
